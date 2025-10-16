@@ -1,0 +1,87 @@
+x-logging-config: &logging-config
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+
+x-odoo-base: &odoo-base
+  depends_on:
+    db:
+      condition: service_healthy
+  environment:
+    - HOST=db
+    - USER=odoo
+    - PASSWORD=odoo
+    - ODOO_LOAD_MODULES=all
+    - ODOO_ADDONS_PATH=/mnt/extra-addons,/mnt/design,/mnt/enterprise
+  restart: unless-stopped
+  logging: *logging-config
+  networks:
+    - odoo-net
+
+
+volumes:
+  odoo-db-data:
+
+
+networks:
+  odoo-net:
+    driver: bridge
+
+
+services:
+  db:
+    image: postgres:16
+    container_name: db
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=odoo
+      - POSTGRES_PASSWORD=odoo
+    volumes:
+      - odoo-db-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    logging: *logging-config
+    networks:
+      - odoo-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U odoo -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
+  odoo_1:
+    <<: *odoo-base
+    image: odoo:${VERSION_1}.0
+    container_name: odoo${VERSION_1}
+    ports:
+      - "80${VERSION_1}:8069"
+    volumes:
+      - ./${VERSION_1}/custom:/mnt/extra-addons
+      - ./${VERSION_1}/design:/mnt/design
+      - ./${VERSION_1}/enterprise:/mnt/enterprise
+
+
+  odoo_2:
+    <<: *odoo-base
+    image: odoo:${VERSION_2}.0
+    container_name: odoo${VERSION_2}
+    ports:
+      - "80${VERSION_2}:8069"
+    volumes:
+      - ./${VERSION_2}/custom:/mnt/extra-addons
+      - ./${VERSION_2}/design:/mnt/design
+      - ./${VERSION_2}/enterprise:/mnt/enterprise
+
+
+  odoo_3:
+    <<: *odoo-base
+    image: odoo:${VERSION_3}.0
+    container_name: odoo${VERSION_3}
+    ports:
+      - "80${VERSION_3}:8069"
+    volumes:
+      - ./${VERSION_3}/custom:/mnt/extra-addons
+      - ./${VERSION_3}/design:/mnt/design
+      - ./${VERSION_3}/enterprise:/mnt/enterprise
